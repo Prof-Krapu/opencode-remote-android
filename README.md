@@ -130,4 +130,5 @@ The app is not limited to LAN. You can also use it over WAN/VPN if your network 
 
 ## Contributors
 
+<a href="https://github.com/giuliastro"><img src="https://github.com/giuliastro.png" width="40" height="40" alt="giuliastro" title="giuliastro" /></a>
 <a href="https://github.com/gervaso-assistant"><img src="https://github.com/gervaso-assistant.png" width="40" height="40" alt="Gervaso" title="Gervaso" /></a>
