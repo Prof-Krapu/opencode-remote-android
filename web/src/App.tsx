@@ -1214,12 +1214,17 @@ function App() {
                   <div className="session-card-main">
                     <div>
                       {renamingSessionID === session.id ? (
-                        <div className="rename-inline">
+                        <div
+                          className="rename-inline"
+                          onClick={(event) => event.stopPropagation()}
+                          onMouseDown={(event) => event.stopPropagation()}
+                        >
                           <input
                             ref={renameInputRef}
                             value={renameValue}
                             onChange={(event) => setRenameValue(event.target.value)}
                             onKeyDown={(event) => {
+                              event.stopPropagation()
                               if (event.key === "Enter") {
                                 event.preventDefault()
                                 renameSession(session.id, renameValue, session.directory).catch(() => undefined)
