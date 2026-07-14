@@ -1401,24 +1401,29 @@ button.compact {
 .rename-inline {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
+  max-width: 100%;
 }
 
 .rename-input {
+  flex: 1;
+  min-width: 0;
   font-size: inherit;
   font-family: inherit;
-  padding: 0.25rem 0.5rem;
+  padding: 0.35rem 0.5rem;
   border: 1px solid var(--primary);
   border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text);
-  width: 100%;
-  min-width: 140px;
   outline: none;
 }
 
 .rename-input:focus {
   box-shadow: 0 0 0 2px var(--primary-soft);
+}
+
+.rename-inline .compact {
+  flex-shrink: 0;
 }
 
 .detail-title-row {

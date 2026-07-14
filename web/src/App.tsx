@@ -972,6 +972,11 @@ function App() {
     wasRunningRef.current = ["busy", "retry"].includes(selectedSession.status)
   }, [selectedSession?.id, selectedSession?.status])
 
+  // Cancel inline rename when navigating away from the current view
+  useEffect(() => {
+    cancelRename()
+  }, [view])
+
   const navItems = [
     { view: "sessions" as const, label: t('nav.sessions'), icon: <FolderIcon size={19} />, disabled: !hasConfiguredServer },
     { view: "detail" as const, label: t('nav.detail'), icon: <ChatIcon size={19} />, disabled: !selectedSession },
@@ -1222,23 +1227,32 @@ function App() {
                                 cancelRename()
                               }
                             }}
-                            onBlur={() => {
-                              // Only cancel if not clicked on save button
-                              if (renameValue === session.title || !renameValue.trim()) {
-                                cancelRename()
-                              }
-                            }}
+                            onClick={(event) => event.stopPropagation()}
+                            onMouseDown={(event) => event.stopPropagation()}
                             placeholder={t('session.renamePlaceholder')}
                             className="rename-input"
                             autoComplete="off"
                           />
                           <button
                             className="btn-primary compact"
-                            onClick={() => renameSession(session.id, renameValue, session.directory).catch(() => undefined)}
-                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              renameSession(session.id, renameValue, session.directory).catch(() => undefined)
+                            }}
+                            onMouseDown={(event) => event.stopPropagation()}
                             title={t('session.renameConfirm')}
                           >
                             <SaveIcon size={14} />
+                          </button>
+                          <button
+                            className="btn-secondary compact"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              cancelRename()
+                            }}
+                            title={t('session.cancel')}
+                          >
+                            <CloseIcon size={14} />
                           </button>
                         </div>
                       ) : (
@@ -1388,26 +1402,29 @@ function App() {
                               cancelRename()
                             }
                           }}
-                          onBlur={() => {
-                            if (renameValue === selectedSession.title || !renameValue.trim()) {
-                              cancelRename()
-                            }
-                          }}
+                          onClick={(event) => event.stopPropagation()}
+                          onMouseDown={(event) => event.stopPropagation()}
                           placeholder={t('session.renamePlaceholder')}
                           className="rename-input"
                           autoComplete="off"
                         />
                         <button
                           className="btn-primary compact"
-                          onClick={() => renameSession(selectedSession.id, renameValue, selectedSession.directory).catch(() => undefined)}
-                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            renameSession(selectedSession.id, renameValue, selectedSession.directory).catch(() => undefined)
+                          }}
+                          onMouseDown={(event) => event.stopPropagation()}
                           title={t('session.renameConfirm')}
                         >
                           <SaveIcon size={14} />
                         </button>
                         <button
                           className="btn-secondary compact"
-                          onClick={() => cancelRename()}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            cancelRename()
+                          }}
                           title={t('session.cancel')}
                         >
                           <CloseIcon size={14} />
