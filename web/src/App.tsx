@@ -87,6 +87,33 @@ function canTestConfig(config: ServerConfig): boolean {
   return Boolean(config.host.trim() && config.port > 0 && config.username.trim())
 }
 
+// A host is "private" when traffic to it stays on a trusted network:
+// loopback, RFC1918 LAN, mDNS .local, or Tailscale (CGNAT range / .ts.net over WireGuard).
+function isPrivateHost(rawHost: string): boolean {
+  const clean = rawHost.trim().replace(/^(https?):\/\//, "").split(/[/:]/)[0].toLowerCase()
+  if (!clean) return true
+  if (clean === "localhost" || clean === "::1" || clean.endsWith(".local") || clean.endsWith(".ts.net")) return true
+  const parts = clean.split(".")
+  if (parts.length === 4 && parts.every((part) => /^\d+$/.test(part))) {
+    const [a, b] = parts.map(Number)
+    if (a === 127 || a === 10) return true
+    if (a === 172 && b >= 16 && b <= 31) return true
+    if (a === 192 && b === 168) return true
+    if (a === 100 && b >= 64 && b <= 127) return true
+    return false
+  }
+  return false
+}
+
+// Plain HTTP to a non-private host sends the Basic-auth credentials in cleartext.
+function isInsecureHttpConfig(config: ServerConfig): boolean {
+  const host = config.host.trim()
+  if (!host) return false
+  const schemeMatch = host.match(/^(https?):\/\//)
+  const scheme = schemeMatch ? schemeMatch[1] : "http"
+  return scheme === "http" && !isPrivateHost(host)
+}
+
 function modelKey(model: ModelSelection): string {
   return [model.providerID, model.modelID, model.variant ?? ""].map(encodeURIComponent).join("|")
 }
@@ -280,6 +307,7 @@ function App() {
   const backgroundFailureCountRef = useRef(0)
   const initialSessionLoadRef = useRef(true)
   const latestMessageTimesRef = useRef(new Map<string, { sessionUpdated: number; activityTime: number }>())
+  const pollingFastRef = useRef(false)
 
   const selectedSession = useMemo(
     () => sessions.find((session) => session.id === selectedID) ?? null,
@@ -906,6 +934,12 @@ function App() {
     localStorage.setItem(NEW_SESSION_DIRECTORY_STORAGE_KEY, newSessionDirectory)
   }, [newSessionDirectory])
 
+  // Keep the polling cadence decision in a ref so the polling effect below
+  // does not re-run its initial loads on every status flip.
+  useEffect(() => {
+    pollingFastRef.current = awaitingAssistantReply || busySending || isSessionRunning
+  }, [awaitingAssistantReply, busySending, isSessionRunning])
+
   useEffect(() => {
     if (!config.host || config.port <= 0) {
       setConnectionState("idle")
@@ -920,13 +954,37 @@ function App() {
     loadCommands().catch(() => undefined)
     loadAgents().catch(() => undefined)
     loadModels().catch(() => undefined)
-    const timer = setInterval(() => {
+    // Adaptive polling: fast while work is in flight, slow when idle,
+    // and no network traffic at all while the app is hidden (battery/data).
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const runTick = () => {
+      if (document.hidden) return
       refreshSessions(true).catch(() => undefined)
       if (selectedSession) {
         loadSelected(selectedSession.id, selectedSession.directory).catch(() => undefined)
       }
-    }, 3500)
-    return () => clearInterval(timer)
+    }
+    const schedule = () => {
+      if (cancelled) return
+      timer = setTimeout(() => {
+        runTick()
+        schedule()
+      }, pollingFastRef.current ? 1500 : 10000)
+    }
+    schedule()
+    const onVisibilityChange = () => {
+      if (cancelled || document.hidden) return
+      if (timer) clearTimeout(timer)
+      runTick()
+      schedule()
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange)
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+      document.removeEventListener("visibilitychange", onVisibilityChange)
+    }
   }, [config.host, config.port, config.username, config.password, selectedSession?.id, selectedNewSessionDirectory])
 
   useEffect(() => {
@@ -1125,6 +1183,12 @@ function App() {
               {settingsNotice.type === 'error' && '✗ '}
               {settingsNotice.type === 'info' && 'ℹ '}
               {settingsNotice.text}
+            </div>
+          )}
+
+          {isInsecureHttpConfig(draftConfig) && (
+            <div className="notice error fade-in">
+              {t('settings.insecureHttpWarning', { host: draftConfig.host.trim() })}
             </div>
           )}
           
