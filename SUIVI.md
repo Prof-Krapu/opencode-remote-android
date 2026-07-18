@@ -16,11 +16,11 @@ Fork personnel de [`giuliastro/opencode-remote-android`](https://github.com/giul
 | Phase | Objet | État |
 |---|---|---|
 | **A** | Service systemd `opencode-serve` sur le PC | ✅ **FAIT** (2026-07-18) |
-| **0** | Fork + keystore + secrets + CI cloud verte | 🔄 en cours (build test lancé, run 29623299820) |
-| **1** | Locale FR · tests en CI · polling adaptatif · warning sécu http | ⏳ à faire |
-| **3** | Refactor `App.tsx` (85 Ko → `views/` + `hooks/`) | ⏳ à faire (**avant** phase 2, ordre délibéré) |
-| **2** | Permissions à distance + rendu tool calls | ⏳ à faire |
-| **4** | Release `v1.5.0` signée + livraison APK | ⏳ à faire |
+| **0** | Fork + keystore + secrets + CI cloud verte | ✅ **FAIT** (run 29623299820, 2m42s) |
+| **1** | Locale FR · tests en CI · polling adaptatif · warning sécu http | ✅ **FAIT** (CI verte run 29623754301) |
+| **3** | Refactor `App.tsx` (85 Ko → `views/` + `hooks/`) | ✅ **FAIT** (commit be31c38, 4 suites + tsc verts) |
+| **2** | Permissions à distance + rendu tool calls | ✅ **FAIT** — ⚠️ validé contre l'OpenAPI mais **pas encore testé sur une vraie demande de permission live** (aucune en attente au moment du dev) |
+| **4** | Release `v1.5.0` signée + livraison APK | 🔄 en cours |
 
 ## Phase A — serveur opencode (FAIT)
 
@@ -38,28 +38,18 @@ Fork personnel de [`giuliastro/opencode-remote-android`](https://github.com/giul
 - Actions activées via `gh api -X PUT /repos/Prof-Krapu/opencode-remote-android/actions/permissions -F enabled=true` (forks = Actions désactivées par défaut ; `-f` envoie une string → utiliser `-F` booléen)
 - Build test : `gh workflow run android-apk.yml -R Prof-Krapu/opencode-remote-android` → vérifier artefact `app-release-signed.apk` présent et signé
 
-## Phases restantes — plan détaillé
+## Architecture actuelle (post-refactor, v1.5.0)
 
-### Phase 1 — quick wins
-1. **Locale FR** dans `web/src/i18n.ts` : ajouter `'fr'` à `LanguageCode`, dictionnaire complet (~150 clés, le type `Record<LanguageCode, Record<TranslationKey, string>>` + `i18n.test.mjs` garantissent l'exhaustivité), entrée `languageOptions`, cas `fr` dans `normalizeLanguage`
-2. **CI** : ajouter une étape tests dans `android-apk.yml` après `npm ci` : `npm run test:i18n && npm run test:ui && npm run test:settings && npm run test:model`
-3. **Polling adaptatif** dans `App.tsx` : aujourd'hui `setInterval` fixe 3,5 s qui tourne même app masquée → pause sur `document.hidden`/`visibilitychange`, 1,5 s si session sélectionnée `busy|retry` ou réponse attendue, 10 s sinon
-4. **Warning sécu** : bandeau dans Settings si config `http` + hôte hors tailnet (`100.64.0.0/10`) / RFC1918 / localhost (+ clés i18n dans les 4 langues)
-5. Garde-fous locaux avant push : `cd web && npm ci && npm run test:i18n && npm run test:ui && npm run test:settings && npm run test:model && npm run build`
+- `web/src/hooks/useAppController.ts` — **toute la logique** (état, mémos, handlers, effets, polling) ; retourne un objet `AppController` passé tel quel aux vues. **Garder l'ordre des déclarations** (settings-regression utilise des regex ordre-dépendants : `saveConfig` → `testConnection` → `refreshSessions`).
+- `web/src/utils.ts` — fonctions pures + constantes `*_STORAGE_KEY` + `defaultConfig`.
+- `web/src/views/` — `SettingsView`, `SessionsView`, `DetailView`, `HelpView`, overlays `NewSessionPickerDialog`/`DetailSheet`/`DeleteSessionDialog`, plus `PermissionBanner` et `MessagePart` (Phase 2). Chaque vue déstructure ce qu'elle utilise du `controller` (`noUnusedLocals` actif → déstructuration exacte).
+- `web/src/App.tsx` — shell uniquement (nav, switching de vues).
+- Tests de régression (`*-regression.test.mjs`) : lisent la **concaténation** des fichiers sources (`appSources`) — ajouter tout nouveau fichier vue à cette liste.
+- **Permissions** : `permissionApi` dans `api.ts` fusionne v1 (`GET /permission`, réponse `POST /session/:id/permissions/:pid` body `{response: once|always|reject}`) et v2 (`GET /api/permission/request`, réponse `POST /api/session/:sid/permission/:rid/reply` body `{reply}`) en `PendingPermission` normalisé ; polling dans le même tick adaptatif que les sessions ; bannière `PermissionBanner` au-dessus du composer + badge 🔐 sur les cartes.
+- **Rendu messages** : `MessagePart` rend text (markdown + bouton copier sur `pre`), `reasoning` (repliable), `tool` (carte compacte, `toolCallSummary`). `assistantResponseSignature` ne compte que les messages **avec texte** (sinon la bulle « typing » disparaît dès un tool call — piège corrigé).
 
-### Phase 3 — refactor (AVANT phase 2, ordre délibéré)
-- `App.tsx` = 85 Ko, ~50 `useState` dans un seul composant. Découper :
-  - `web/src/hooks/` : `useServerConfig`, `useSessions`, `useSessionDetail`, `useConnection`
-  - `web/src/views/` : `SettingsView`, `SessionsView`, `DetailView`, `HelpView`
-  - `web/src/utils.ts` : fonctions pures déjà en tête d'`App.tsx`
-- **Comportement strictement identique** ; `npm run test:ui` (ui-regression) + `tsc` comme garde-fous. Commits séparés par extraction.
+## Phase 4 — release (en cours)
 
-### Phase 2 — permissions à distance (le vrai `/remote-control`)
-- Endpoint de réponse : `POST /session/:id/permissions/:permissionID` body `{response, remember?}` (cf. openapi.json)
-- **À déterminer depuis l'OpenAPI figé** : comment les demandes en attente remontent (événement SSE `/event` type `permission.*` ? endpoint dédié ? part de message ?) → implémenter détection + UI **Approuver / Refuser / Toujours** + badge sur la carte session
-- Bonus inclus : rendu des parts `tool`/`reasoning` dans les messages (aujourd'hui `extractText` ne garde que `type==="text"`) + bouton copier sur les blocs de code
-
-### Phase 4 — release
 1. Bump `web/package.json` → `1.5.0`, push `main`, tag `v1.5.0` → la CI publie la release avec `app-release-signed.apk`
 2. `gh release download v1.5.0 -R Prof-Krapu/opencode-remote-android` → APK livré (transfert téléphone : navigateur du OnePlus sur la page de release, ou adb)
 3. Config app : host `100.100.128.63`, port `4096`, user `opencode`, mot de passe = celui de `~/.config/opencode-serve/env`
@@ -83,5 +73,5 @@ journalctl --user -u opencode-serve -f
 - **Ne jamais committer** : mots de passe (`~/.config/opencode-serve/env`), keystore (`~/.config/opencode-remote/`). Le repo reste propre.
 - `gh` dans ce repo : toujours `-R Prof-Krapu/opencode-remote-android` (2 remotes → erreur sinon).
 - Workflow release : publie sur tag `v*` **et exige les 4 secrets** pour un tag. Sans tag → artefact signé si secrets présents.
-- Polling actuel : `setInterval(..., 3500)` dans le gros `useEffect` d'`App.tsx` + `loadSessionActivityTimes` = N+1 requêtes (1 appel/session/refresh).
+- Polling : adaptatif dans `useAppController` (1,5 s si session occupée/réponse attendue, 10 s sinon, **pause quand app masquée**). `loadSessionActivityTimes` reste N+1 (1 appel/session/refresh, cache par `time.updated`) — amélioration future possible via SSE `/event` (mais `EventSource` ne supporte pas le header `Authorization` → nécessiterait un plugin Capacitor SSE).
 - i18n : `TranslationKey` est un type union exhaustif → ajouter une clé = la traduire dans **les 4 langues** sinon `tsc` et `test:i18n` cassent.
