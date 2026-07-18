@@ -1,7 +1,22 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
-const app = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8')
+// App is split into a controller hook, utils and per-view files; assertions
+// below run against the concatenation of all of them.
+const appSources = [
+  'App.tsx',
+  'types.ts',
+  'utils.ts',
+  'hooks/useAppController.ts',
+  'views/SettingsView.tsx',
+  'views/SessionsView.tsx',
+  'views/DetailView.tsx',
+  'views/HelpView.tsx',
+  'views/NewSessionPickerDialog.tsx',
+  'views/DetailSheet.tsx',
+  'views/DeleteSessionDialog.tsx'
+]
+const app = appSources.map((file) => readFileSync(new URL('./' + file, import.meta.url), 'utf8')).join('\n')
 const api = readFileSync(new URL('./api.ts', import.meta.url), 'utf8')
 const icons = readFileSync(new URL('./Icons.tsx', import.meta.url), 'utf8')
 const styles = readFileSync(new URL('./styles.css', import.meta.url), 'utf8')

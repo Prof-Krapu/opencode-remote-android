@@ -156,3 +156,7 @@ export type CommandInfo = {
   description?: string
   source?: "command" | "mcp" | "skill"
 }
+
+export type NoticeType = "info" | "success" | "error"
+
+export type ThemePreference = "system" | "light" | "dark"
