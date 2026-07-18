@@ -20,7 +20,16 @@ Fork personnel de [`giuliastro/opencode-remote-android`](https://github.com/giul
 | **1** | Locale FR · tests en CI · polling adaptatif · warning sécu http | ✅ **FAIT** (CI verte run 29623754301) |
 | **3** | Refactor `App.tsx` (85 Ko → `views/` + `hooks/`) | ✅ **FAIT** (commit be31c38, 4 suites + tsc verts) |
 | **2** | Permissions à distance + rendu tool calls | ✅ **FAIT** — ⚠️ validé contre l'OpenAPI mais **pas encore testé sur une vraie demande de permission live** (aucune en attente au moment du dev) |
-| **4** | Release `v1.5.0` signée + livraison APK | 🔄 en cours |
+| **4** | Release `v1.5.0` signée + livraison APK | ✅ **FAIT** (release publiée 2026-07-18, APK vérifié signé `CN=ProfKrapu`) |
+
+## Livraison v1.5.0 (2026-07-18)
+
+- Release : `gh release view v1.5.0 -R Prof-Krapu/opencode-remote-android` → asset `app-release-signed.apk` (6,8 Mo)
+- APK local : `~/Downloads/app-release-signed.apk` — signature vérifiée (`keytool -printcert -jarfile`, propriétaire `CN=ProfKrapu`)
+- **Gotcha release** : le workflow est `workflow_dispatch` only → pousser le tag ne suffit pas, il faut `gh workflow run android-apk.yml --ref v1.5.0` pour que la garde `refs/tags/v*` passe et publie la release
+- Installation téléphone : depuis le OnePlus, ouvrir `https://github.com/Prof-Krapu/opencode-remote-android/releases/latest` dans le navigateur → télécharger `app-release-signed.apk` → autoriser l'installation depuis cette source
+- Config app (Settings) : host `100.100.128.63` · port `4096` · username `opencode` · password = valeur `OPENCODE_SERVER_PASSWORD` de `~/.config/opencode-serve/env`
+- **Reste à valider en conditions réelles** : le flux permissions (bannière + réponses) n'a été testé que contre l'OpenAPI — la première vraie demande de permission d'un agent fera office de test live
 
 ## Phase A — serveur opencode (FAIT)
 
@@ -48,7 +57,7 @@ Fork personnel de [`giuliastro/opencode-remote-android`](https://github.com/giul
 - **Permissions** : `permissionApi` dans `api.ts` fusionne v1 (`GET /permission`, réponse `POST /session/:id/permissions/:pid` body `{response: once|always|reject}`) et v2 (`GET /api/permission/request`, réponse `POST /api/session/:sid/permission/:rid/reply` body `{reply}`) en `PendingPermission` normalisé ; polling dans le même tick adaptatif que les sessions ; bannière `PermissionBanner` au-dessus du composer + badge 🔐 sur les cartes.
 - **Rendu messages** : `MessagePart` rend text (markdown + bouton copier sur `pre`), `reasoning` (repliable), `tool` (carte compacte, `toolCallSummary`). `assistantResponseSignature` ne compte que les messages **avec texte** (sinon la bulle « typing » disparaît dès un tool call — piège corrigé).
 
-## Phase 4 — release (en cours)
+## Phase 4 — release (FAITE)
 
 1. Bump `web/package.json` → `1.5.0`, push `main`, tag `v1.5.0` → la CI publie la release avec `app-release-signed.apk`
 2. `gh release download v1.5.0 -R Prof-Krapu/opencode-remote-android` → APK livré (transfert téléphone : navigateur du OnePlus sur la page de release, ou adb)
