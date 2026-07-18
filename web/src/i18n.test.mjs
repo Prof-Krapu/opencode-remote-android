@@ -3,14 +3,18 @@ import { createTranslator, languageOptions, normalizeLanguage } from './i18n.ts'
 
 assert.equal(normalizeLanguage('it'), 'it')
 assert.equal(normalizeLanguage('zh-TW'), 'zh-TW')
-assert.equal(normalizeLanguage('fr'), 'en')
+assert.equal(normalizeLanguage('fr'), 'fr')
+assert.equal(normalizeLanguage('fr-FR'), 'fr')
 assert.ok(languageOptions.some((language) => language.code === 'zh-TW'))
+assert.ok(languageOptions.some((language) => language.code === 'fr'))
 
 const en = createTranslator('en')
+const fr = createTranslator('fr')
 const it = createTranslator('it')
 const zh = createTranslator('zh-TW')
 
 assert.equal(en('sessions.title'), 'Sessions')
+assert.equal(fr('sessions.title'), 'Sessions')
 assert.equal(it('sessions.title'), 'Sessioni')
 assert.equal(zh('sessions.title'), '工作階段')
 
@@ -34,5 +38,9 @@ assert.equal(en('settings.theme'), 'Theme')
 assert.equal(it('settings.themeDark'), 'Scuro')
 assert.equal(zh('settings.themeSystem'), '跟隨系統')
 assert.equal(en('todo.title'), 'Todo Items')
+
+// Every language must translate every key (no silent fallback to English).
+assert.ok(fr('settings.insecureHttpWarning', { host: 'example.com' }).includes('example.com'))
+assert.ok(fr('settings.insecureHttpWarning') !== en('settings.insecureHttpWarning'))
 
 console.log('i18n tests passed')
