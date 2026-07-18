@@ -27,6 +27,7 @@ export function SessionsView({ controller }: { controller: AppController }) {
     renameInputRef,
     startRename,
     setSessionToDelete,
+    permissionsBySession,
     runtimeError
   } = controller
 
@@ -152,7 +153,14 @@ export function SessionsView({ controller }: { controller: AppController }) {
                   )}
                   <p>{session.directory}</p>
                 </div>
+                <div className="session-card-pills">
                 <span className={`pill ${session.status}`}>{session.status}</span>
+                {(permissionsBySession.get(session.id)?.length ?? 0) > 0 && (
+                  <span className="pill permission-pending" aria-label={t('permission.pendingAria')}>
+                    🔐 {permissionsBySession.get(session.id)!.length}
+                  </span>
+                )}
+                </div>
               </div>
               <div className="session-stats">
                 {session.files > 0 || session.additions > 0 || session.deletions > 0 ? (

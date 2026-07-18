@@ -215,3 +215,29 @@ export function parentDirectory(path: string): string | null {
   if (index <= 0) return separator === "/" ? "/" : null
   return normalized.slice(0, index)
 }
+
+// A message is worth rendering when it carries visible content:
+// text, reasoning, or a tool call.
+export function hasRenderableContent(msg: MessageEnvelope): boolean {
+  return msg.parts.some((part) =>
+    (part.type === "text" && part.text?.trim()) ||
+    (part.type === "reasoning" && part.text?.trim()) ||
+    part.type === "tool"
+  )
+}
+
+// One-line human summary of a tool call: server title when available,
+// otherwise the first non-empty string input, truncated.
+export function toolCallSummary(part: { state?: { title?: string; input?: Record<string, unknown> } }): string {
+  const title = part.state?.title
+  if (title) return title
+  const input = part.state?.input
+  if (input) {
+    for (const value of Object.values(input)) {
+      if (typeof value === "string" && value.trim()) {
+        return value.length > 80 ? `${value.slice(0, 77)}…` : value
+      }
+    }
+  }
+  return ""
+}

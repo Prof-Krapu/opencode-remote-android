@@ -1,8 +1,8 @@
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
 import type { AppController } from "../hooks/useAppController"
-import { agentLabel, formatTime, normalizeMessageMarkdown } from "../utils"
+import { agentLabel, formatTime } from "../utils"
 import { ChatIcon, CloseIcon, LoadingIcon, PencilIcon, SaveIcon, SendIcon, StopCircleIcon } from "../Icons"
+import { MessagePart } from "./MessagePart"
+import { PermissionBanner } from "./PermissionBanner"
 
 export function DetailView({ controller }: { controller: AppController }) {
   const {
@@ -196,9 +196,9 @@ export function DetailView({ controller }: { controller: AppController }) {
                   <small>{formatTime(message.info.time.created)}</small>
                 </header>
                 <div className="message-content">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {normalizeMessageMarkdown(message.text)}
-                  </ReactMarkdown>
+                  {message.parts.map((part) => (
+                    <MessagePart key={part.id} part={part} t={t} />
+                  ))}
                 </div>
               </article>
             ))}
@@ -216,6 +216,8 @@ export function DetailView({ controller }: { controller: AppController }) {
         )}
         </div>
       </div>
+
+      <PermissionBanner controller={controller} />
 
       <div className="composer" ref={composerRef}>
         <textarea

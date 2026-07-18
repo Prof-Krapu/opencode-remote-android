@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { api } from "../api"
+import { api, permissionApi } from "../api"
 import { createTranslator, normalizeLanguage, type LanguageCode } from "../i18n"
 import type {
   AgentOption,
@@ -9,6 +9,8 @@ import type {
   MessageEnvelope,
   ModelOption,
   NoticeType,
+  PendingPermission,
+  PermissionReply,
   ProjectDashboard,
   ServerConfig,
   Session,
@@ -32,6 +34,7 @@ import {
   defaultConfig,
   extractText,
   hasMatchingUserMessage,
+  hasRenderableContent,
   isProjectDirectory,
   messageActivityTime,
   modelFromKey,
@@ -92,6 +95,8 @@ export function useAppController() {
   const [pickerError, setPickerError] = useState<string | null>(null)
   const [messages, setMessages] = useState<MessageEnvelope[]>([])
   const [optimisticUserMessages, setOptimisticUserMessages] = useState<MessageEnvelope[]>([])
+  const [pendingPermissions, setPendingPermissions] = useState<PendingPermission[]>([])
+  const [replyingPermissionID, setReplyingPermissionID] = useState<string | null>(null)
   const [todos, setTodos] = useState<TodoItem[]>([])
   const [diffFiles, setDiffFiles] = useState<DiffFile[]>([])
 
@@ -132,6 +137,7 @@ export function useAppController() {
   const initialSessionLoadRef = useRef(true)
   const latestMessageTimesRef = useRef(new Map<string, { sessionUpdated: number; activityTime: number }>())
   const pollingFastRef = useRef(false)
+  const sessionsRef = useRef<SessionView[]>([])
 
   const selectedSession = useMemo(
     () => sessions.find((session) => session.id === selectedID) ?? null,
@@ -189,16 +195,18 @@ export function useAppController() {
   const renderedMessages = useMemo(() => {
     return [...messages, ...optimisticUserMessages]
       .map((message) => ({ ...message, text: extractText(message) }))
-      .filter((message) => message.text)
+      .filter((message) => message.text || hasRenderableContent(message))
   }, [messages, optimisticUserMessages])
 
   const messageScrollSignature = useMemo(() => {
-    return renderedMessages.map((message) => `${message.info.id}:${message.text.length}`).join("|")
+    return renderedMessages.map((message) => `${message.info.id}:${message.text.length}:${message.parts.length}`).join("|")
   }, [renderedMessages])
 
+  // Only text-bearing assistant messages settle the "awaiting reply" state;
+  // tool-only parts must not dismiss the typing bubble early.
   const assistantResponseSignature = useMemo(() => {
     return renderedMessages
-      .filter((message) => message.info.role !== "user")
+      .filter((message) => message.info.role !== "user" && message.text)
       .map((message) => `${message.info.id}:${message.text.length}`)
       .join("|")
   }, [renderedMessages])
@@ -229,6 +237,16 @@ export function useAppController() {
   const totalDiffAdditions = diffFiles.reduce((sum, file) => sum + file.additions, 0)
   const totalDiffDeletions = diffFiles.reduce((sum, file) => sum + file.deletions, 0)
   const showModelChip = modelOptions.length > 1 || Boolean(activeModelOption) || primaryAgentOptions.length > 0
+  const permissionsBySession = useMemo(() => {
+    const map = new Map<string, PendingPermission[]>()
+    for (const item of pendingPermissions) {
+      const list = map.get(item.sessionID) ?? []
+      list.push(item)
+      map.set(item.sessionID, list)
+    }
+    return map
+  }, [pendingPermissions])
+  const selectedSessionPermissions = selectedSession ? permissionsBySession.get(selectedSession.id) ?? [] : []
 
   async function openSession(sessionID: string, directory: string) {
     setSelectedID(sessionID)
@@ -726,6 +744,42 @@ export function useAppController() {
     }
   }
 
+  // Pending permission requests can belong to sessions of any project:
+  // poll every directory the sessions list currently knows about.
+  async function loadPendingPermissions() {
+    if (!config.host || config.port <= 0) return
+    const directories = [...new Set(sessionsRef.current.map((session) => session.directory).filter(Boolean))]
+    const lists = await Promise.all(
+      (directories.length > 0 ? directories : [undefined]).map((directory) =>
+        permissionApi.listPending(config, directory).catch(() => [] as PendingPermission[])
+      )
+    )
+    const merged = new Map<string, PendingPermission>()
+    for (const list of lists) {
+      for (const item of list) merged.set(item.id, item)
+    }
+    setPendingPermissions([...merged.values()])
+  }
+
+  async function respondPermission(permission: PendingPermission, reply: PermissionReply) {
+    setReplyingPermissionID(permission.id)
+    setRuntimeError(null)
+    try {
+      const directory = sessionsRef.current.find((session) => session.id === permission.sessionID)?.directory
+      await permissionApi.reply(config, permission, reply, directory)
+      setPendingPermissions((current) => current.filter((item) => item.id !== permission.id))
+      await refreshSessions(true)
+      if (selectedSession) {
+        await loadSelected(selectedSession.id, selectedSession.directory)
+      }
+    } catch (err) {
+      setRuntimeError((err as Error).message)
+      await loadPendingPermissions().catch(() => undefined)
+    } finally {
+      setReplyingPermissionID(null)
+    }
+  }
+
   useEffect(() => {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, language)
   }, [language])
@@ -749,6 +803,10 @@ export function useAppController() {
     localStorage.setItem(NEW_SESSION_DIRECTORY_STORAGE_KEY, newSessionDirectory)
   }, [newSessionDirectory])
 
+  useEffect(() => {
+    sessionsRef.current = sessions
+  }, [sessions])
+
   // Keep the polling cadence decision in a ref so the polling effect below
   // does not re-run its initial loads on every status flip.
   useEffect(() => {
@@ -769,6 +827,7 @@ export function useAppController() {
     loadCommands().catch(() => undefined)
     loadAgents().catch(() => undefined)
     loadModels().catch(() => undefined)
+    loadPendingPermissions().catch(() => undefined)
     // Adaptive polling: fast while work is in flight, slow when idle,
     // and no network traffic at all while the app is hidden (battery/data).
     let cancelled = false
@@ -776,6 +835,7 @@ export function useAppController() {
     const runTick = () => {
       if (document.hidden) return
       refreshSessions(true).catch(() => undefined)
+      loadPendingPermissions().catch(() => undefined)
       if (selectedSession) {
         loadSelected(selectedSession.id, selectedSession.directory).catch(() => undefined)
       }
@@ -941,6 +1001,12 @@ export function useAppController() {
     totalDiffAdditions,
     totalDiffDeletions,
     showModelChip,
+    pendingPermissions,
+    replyingPermissionID,
+    permissionsBySession,
+    selectedSessionPermissions,
+    loadPendingPermissions,
+    respondPermission,
     openSession,
     saveConfig,
     testConnection,

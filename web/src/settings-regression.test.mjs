@@ -14,7 +14,9 @@ const appSources = [
   'views/HelpView.tsx',
   'views/NewSessionPickerDialog.tsx',
   'views/DetailSheet.tsx',
-  'views/DeleteSessionDialog.tsx'
+  'views/DeleteSessionDialog.tsx',
+  'views/PermissionBanner.tsx',
+  'views/MessagePart.tsx'
 ]
 const app = appSources.map((file) => readFileSync(new URL('./' + file, import.meta.url), 'utf8')).join('\n')
 const i18n = readFileSync(new URL('./i18n.ts', import.meta.url), 'utf8')

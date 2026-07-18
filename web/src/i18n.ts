@@ -138,6 +138,15 @@ type TranslationKey =
   | 'session.renameTitle'
   | 'session.renamePlaceholder'
   | 'session.renameConfirm'
+  | 'permission.title'
+  | 'permission.allow'
+  | 'permission.always'
+  | 'permission.reject'
+  | 'permission.replying'
+  | 'permission.pendingAria'
+  | 'detail.copy'
+  | 'detail.copied'
+  | 'detail.reasoning'
   | 'help.title'
   | 'help.overview'
   | 'help.server'
@@ -284,6 +293,15 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'session.renameTitle': 'Rename session',
     'session.renamePlaceholder': 'Enter new name...',
     'session.renameConfirm': 'Rename',
+    'permission.title': 'Permission requests',
+    'permission.allow': 'Allow once',
+    'permission.always': 'Always allow',
+    'permission.reject': 'Reject',
+    'permission.replying': 'Sending…',
+    'permission.pendingAria': 'Pending permission requests',
+    'detail.copy': 'Copy',
+    'detail.copied': 'Copied',
+    'detail.reasoning': 'Reasoning',
     'help.title': 'Help & Documentation',
     'help.overview': 'Overview',
     'help.server': 'Server',
@@ -429,6 +447,15 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'session.renameTitle': 'Renommer la session',
     'session.renamePlaceholder': 'Saisissez un nouveau nom…',
     'session.renameConfirm': 'Renommer',
+    'permission.title': 'Demandes de permission',
+    'permission.allow': 'Autoriser',
+    'permission.always': 'Toujours autoriser',
+    'permission.reject': 'Refuser',
+    'permission.replying': 'Envoi…',
+    'permission.pendingAria': 'Demandes de permission en attente',
+    'detail.copy': 'Copier',
+    'detail.copied': 'Copié',
+    'detail.reasoning': 'Raisonnement',
     'help.title': 'Aide et documentation',
     'help.overview': 'Vue d’ensemble',
     'help.server': 'Serveur',
@@ -574,6 +601,15 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'session.renameTitle': 'Rinomina sessione',
     'session.renamePlaceholder': 'Inserisci nuovo nome...',
     'session.renameConfirm': 'Rinomina',
+    'permission.title': 'Richieste di autorizzazione',
+    'permission.allow': 'Consenti una volta',
+    'permission.always': 'Consenti sempre',
+    'permission.reject': 'Rifiuta',
+    'permission.replying': 'Invio…',
+    'permission.pendingAria': 'Richieste di autorizzazione in attesa',
+    'detail.copy': 'Copia',
+    'detail.copied': 'Copiato',
+    'detail.reasoning': 'Ragionamento',
     'help.title': 'Aiuto e documentazione',
     'help.overview': 'Panoramica',
     'help.server': 'Server',
@@ -719,6 +755,15 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'session.renameTitle': '重新命名工作階段',
     'session.renamePlaceholder': '輸入新名稱...',
     'session.renameConfirm': '重新命名',
+    'permission.title': '權限請求',
+    'permission.allow': '允許一次',
+    'permission.always': '一律允許',
+    'permission.reject': '拒絕',
+    'permission.replying': '傳送中…',
+    'permission.pendingAria': '待處理的權限請求',
+    'detail.copy': '複製',
+    'detail.copied': '已複製',
+    'detail.reasoning': '推理',
     'help.title': '說明與文件',
     'help.overview': '總覽',
     'help.server': '伺服器',

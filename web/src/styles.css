@@ -1461,3 +1461,144 @@ button.compact {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* --- Remote permissions & rich message parts --- */
+
+.session-card-pills {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.pill.permission-pending {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.pill.completed {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.pill.error {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.pill.running,
+.pill.pending {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.permission-banner {
+  margin: 0 var(--space-3) var(--space-3);
+  border: 1px solid var(--danger-border, var(--danger));
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--danger-soft);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.permission-banner h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.permission-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.permission-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.permission-detail code {
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.permission-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.tool-part {
+  border: 1px solid var(--primary-border, var(--surface-border, transparent));
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  margin: var(--space-2) 0;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.tool-part-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.tool-part-name {
+  font-weight: 600;
+}
+
+.tool-part-summary {
+  margin: 2px 0 0;
+  word-break: break-word;
+}
+
+.tool-part-error {
+  color: var(--danger);
+  margin: 2px 0 0;
+}
+
+.reasoning-part {
+  margin: var(--space-2) 0;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.reasoning-part summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.reasoning-body {
+  margin-top: var(--space-2);
+  border-left: 2px solid var(--primary-border, currentColor);
+  padding-left: var(--space-3);
+}
+
+.codeblock {
+  position: relative;
+}
+
+.codeblock .copy-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--primary-border, currentColor);
+  background: var(--surface, transparent);
+  cursor: pointer;
+  opacity: 0.7;
+  z-index: 1;
+}
+
+.codeblock .copy-btn:hover {
+  opacity: 1;
+}

@@ -14,7 +14,9 @@ const appSources = [
   'views/HelpView.tsx',
   'views/NewSessionPickerDialog.tsx',
   'views/DetailSheet.tsx',
-  'views/DeleteSessionDialog.tsx'
+  'views/DeleteSessionDialog.tsx',
+  'views/PermissionBanner.tsx',
+  'views/MessagePart.tsx'
 ]
 const app = appSources.map((file) => readFileSync(new URL('./' + file, import.meta.url), 'utf8')).join('\n')
 const api = readFileSync(new URL('./api.ts', import.meta.url), 'utf8')
@@ -112,5 +114,25 @@ assert.ok(app.includes('remarkGfm'), 'messages should support GitHub-flavored Ma
 assert.ok(/\.message-content pre[\s\S]*?overflow-x:\s*auto/.test(styles), 'fenced code blocks should render as scrollable blocks')
 
 assert.match(icons, /export const RefreshIcon/, 'RefreshIcon should exist for idle refresh UI')
+
+// Remote permission control
+assert.ok(api.includes('permissionApi'), 'API should expose the merged v1/v2 permission endpoints')
+assert.ok(api.includes('withDirectory("/permission", directory)'), 'pending v1 permissions should be listed with directory scoping')
+assert.ok(api.includes('withDirectory("/api/permission/request", directory)'), 'pending v2 permissions should be listed with directory scoping')
+assert.ok(api.includes('`/session/${permission.sessionID}/permissions/${permission.id}`'), 'v1 replies should use the session-scoped permission endpoint')
+assert.ok(api.includes('`/api/session/${permission.sessionID}/permission/${permission.id}/reply`'), 'v2 replies should use the session-scoped v2 reply endpoint')
+assert.ok(app.includes('PermissionBanner'), 'detail view should surface pending permission requests')
+assert.ok(app.includes('respondPermission'), 'controller should expose a permission reply handler')
+assert.ok(app.includes('permissionsBySession'), 'sessions view should badge sessions with pending permissions')
+assert.ok(app.includes('permission-pending'), 'pending permission badge should have a dedicated visual treatment')
+assert.ok(app.includes('loadPendingPermissions().catch(() => undefined)'), 'permission requests should be polled alongside session refreshes')
+assert.ok(app.includes("t('permission.allow')"), 'allow-once reply should be localized')
+assert.ok(app.includes("t('permission.always')"), 'always reply should be localized')
+assert.ok(app.includes("t('permission.reject')"), 'reject reply should be localized')
+assert.ok(app.includes('MessagePart'), 'messages should render per-part (text, reasoning, tool calls)')
+assert.ok(app.includes('toolCallSummary'), 'tool calls should show a human-readable summary')
+assert.ok(app.includes('reasoning-part'), 'reasoning parts should render collapsible')
+assert.ok(app.includes('copy-btn'), 'code blocks should offer a copy button')
+assert.ok(app.includes('hasRenderableContent'), 'tool-only messages should still render even without text')
 
 console.log('ui regression tests passed')

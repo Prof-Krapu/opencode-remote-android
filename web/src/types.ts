@@ -67,6 +67,21 @@ export type SessionStatus = {
   next?: number
 }
 
+export type MessagePart = {
+  id: string
+  type: string
+  text?: string
+  tool?: string
+  callID?: string
+  state?: {
+    status?: string
+    title?: string
+    input?: Record<string, unknown>
+    output?: string
+    error?: string
+  }
+}
+
 export type MessageEnvelope = {
   info: {
     id: string
@@ -77,11 +92,7 @@ export type MessageEnvelope = {
       completed?: number
     }
   }
-  parts: Array<{
-    id: string
-    type: string
-    text?: string
-  }>
+  parts: MessagePart[]
 }
 
 export type TodoItem = {
@@ -160,3 +171,17 @@ export type CommandInfo = {
 export type NoticeType = "info" | "success" | "error"
 
 export type ThemePreference = "system" | "light" | "dark"
+
+export type PermissionReply = "once" | "always" | "reject"
+
+// Normalized pending permission request, merged from the v1 (/permission)
+// and v2 (/api/permission/request) server APIs.
+export type PendingPermission = {
+  id: string
+  sessionID: string
+  apiVersion: "v1" | "v2"
+  action: string
+  resources: string[]
+  always: string[]
+  metadata?: Record<string, unknown>
+}

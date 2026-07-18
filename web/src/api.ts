@@ -9,6 +9,8 @@ import type {
   MessageEnvelope,
   ModelOption,
   ModelSelection,
+  PendingPermission,
+  PermissionReply,
   ProjectCurrent,
   PathInfo,
   ServerConfig,
@@ -330,6 +332,69 @@ export const api = {
     return request<boolean>(config, withDirectory(`/session/${sessionID}/abort`, directory), {
       method: "POST",
       body: {}
+    })
+  }
+}
+
+type PermissionRequestV1 = {
+  id: string
+  sessionID: string
+  permission: string
+  patterns?: string[]
+  metadata?: Record<string, unknown>
+  always?: string[]
+}
+
+type PermissionRequestV2 = {
+  id: string
+  sessionID: string
+  action: string
+  resources?: string[]
+  save?: string[]
+  metadata?: Record<string, unknown>
+}
+
+export const permissionApi = {
+  // Merge pending permission requests from the v1 and v2 server APIs,
+  // normalized into a single shape. Either API may be absent/empty.
+  async listPending(config: ServerConfig, directory?: string): Promise<PendingPermission[]> {
+    const [v1, v2Response] = await Promise.all([
+      request<PermissionRequestV1[]>(config, withDirectory("/permission", directory)).catch(() => [] as PermissionRequestV1[]),
+      request<{ data?: PermissionRequestV2[] }>(config, withDirectory("/api/permission/request", directory)).catch(() => ({ data: [] as PermissionRequestV2[] }))
+    ])
+    const v2 = v2Response.data ?? []
+    return [
+      ...v1.map((item) => ({
+        id: item.id,
+        sessionID: item.sessionID,
+        apiVersion: "v1" as const,
+        action: item.permission,
+        resources: item.patterns ?? [],
+        always: item.always ?? [],
+        metadata: item.metadata
+      })),
+      ...v2.map((item) => ({
+        id: item.id,
+        sessionID: item.sessionID,
+        apiVersion: "v2" as const,
+        action: item.action,
+        resources: item.resources ?? [],
+        always: item.save ?? [],
+        metadata: item.metadata
+      }))
+    ]
+  },
+
+  reply(config: ServerConfig, permission: PendingPermission, reply: PermissionReply, directory?: string) {
+    if (permission.apiVersion === "v2") {
+      return request<boolean>(config, withDirectory(`/api/session/${permission.sessionID}/permission/${permission.id}/reply`, directory), {
+        method: "POST",
+        body: { reply }
+      })
+    }
+    return request<boolean>(config, withDirectory(`/session/${permission.sessionID}/permissions/${permission.id}`, directory), {
+      method: "POST",
+      body: { response: reply }
     })
   }
 }
